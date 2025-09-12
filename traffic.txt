@@ -1,0 +1,69 @@
+
+
+module traffic_light_arty(
+    input  wire clk,      // 100MHz clock input (Arty: pin E3, "clk100")
+    input  wire rst,      // Active-high reset (button)
+    output reg  red,      // Red LED (Arty: LD4, pin H5)
+    output reg  blue,     // Blue LED (Arty: LD5, pin J5)
+    output reg  green     // Green LED (Arty: LD6, pin T9)
+);
+
+    // State encoding
+    localparam S_RED   = 2'b00,
+               S_BLUE  = 2'b01,
+               S_GREEN = 2'b10;
+
+    reg [1:0] state = S_RED;
+    reg [27:0] counter = 0; // Enough width for 5s at 100Mhz
+
+    // Time constants (100_000_000 cycles = 1s at 100MHz)
+    localparam RED_TIME   = 28'd500_000_000,  // 5s
+               BLUE_TIME  = 28'd300_000_000,  // 3s
+               GREEN_TIME = 28'd200_000_000;  // 2s
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            state   <= S_RED;
+            counter <= 0;
+        end else begin
+            case (state)
+                S_RED: begin
+                    if (counter < RED_TIME - 1)
+                        counter <= counter + 1;
+                    else begin
+                        counter <= 0;
+                        state   <= S_BLUE;
+                    end
+                end
+                S_BLUE: begin
+                    if (counter < BLUE_TIME - 1)
+                        counter <= counter + 1;
+                    else begin
+                        counter <= 0;
+                        state   <= S_GREEN;
+                    end
+                end
+                S_GREEN: begin
+                    if (counter < GREEN_TIME - 1)
+                        counter <= counter + 1;
+                    else begin
+                        counter <= 0;
+                        state   <= S_RED;
+                    end
+                end
+                default: begin
+                    state   <= S_RED;
+                    counter <= 0;
+                end
+            endcase
+        end
+    end
+
+    // Output logic for LEDs (active high)
+    always @* begin
+        red   = (state == S_RED);
+        blue  = (state == S_BLUE);
+        green = (state == S_GREEN);
+    end
+
+endmodule
